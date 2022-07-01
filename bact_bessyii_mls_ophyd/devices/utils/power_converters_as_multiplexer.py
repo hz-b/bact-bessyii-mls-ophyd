@@ -1,8 +1,15 @@
+"""A collection of power converters exported as if these were multiplexed
+
+Todo:
+    Review if the multiplex itself should be contained in this file too
+    Or a helper function to generate it ...
+"""
 from ophyd import Signal, Device, Component as Cpt, Kind
 
 from ophyd import PseudoPositioner, PseudoSingle
 from ophyd.pseudopos import pseudo_position_argument, real_position_argument
 from .power_converter import ResettingPowerConverter
+
 
 class ScaledPowerConverter(PseudoPositioner):
     """A configurable steerer
@@ -41,14 +48,14 @@ class ScaledPowerConverter(PseudoPositioner):
 
         offset = float(offset)
         slope = float(slope)
-            
+
         r = real_pos.r
         try:
             tmp = r - offset
         except:
             self.log.error(f"Value r was {r}")
             raise
-        
+
         v = tmp / slope
 
         return self.PseudoPosition(p=r)
@@ -58,7 +65,14 @@ _selected_default = "none selected"
 
 
 class SelectedPowerConverter(Device):
-    """Select a steerer and mangle its data ..."""
+    """Select a power converter and mangle its data ...
+
+    switching to the next power converter seems to mess around with
+    the pseudo data
+
+    Todo:
+        Investigate how to
+    """
 
     selected = Cpt(Signal, name="selected", value=_selected_default)
 
