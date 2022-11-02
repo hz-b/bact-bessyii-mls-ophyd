@@ -5,13 +5,13 @@ from ..utils import process_vector
 
 logger = logging.getLogger("bact2")
 
+from dataclasses import dataclass
+
 
 def unpack_and_validate_data(
-    packed_data,
-    n_valid_items=None,
+    packed_data, *,
     indices=None,
     n_elements=None,
-    skip_unset_second_half=True,
 ):
     """Split the packed data up to a matrix of bpm waveforms
 
@@ -25,11 +25,6 @@ def unpack_and_validate_data(
     data to named array
     """
 
-    if n_elements is None:
-        # BESSY II standard
-        n_elements = 2048
-
-    assert n_valid_items is not None
     # Test for digital twind
     shape = packed_data.shape
     (ndim,) = shape
@@ -38,27 +33,8 @@ def unpack_and_validate_data(
         raise AssertionError(txt)
 
     assert ndim == n_elements
-    if skip_unset_second_half:
-        # remove this functionality from here
-        shape = packed_data.shape
-        try:
-            mat1 = process_vector.unpack_vector_to_matrix(packed_data, n_vecs=2)
-        except:
-            logger.error(f"{__name__}: Failed to unpack packed data with shape {shape}")
-            raise
 
-        with_data = mat1[0, :]
-        unused = mat1[1, :]
-
-        process_vector.check_unset_elements(
-            unused, n_valid_rows=n_valid_items, unset_elements_value=0
-        )
-        del unused
-
-    else:
-        with_data = packed_data
-
-    mat = process_vector.unpack_vector_to_matrix(with_data, n_vecs=8)
+    mat = process_vector.unpack_vector_to_matrix(packed_data, n_vecs=8)
     if indices is not None:
         shape = mat.shape
         ishape = indices.shape
@@ -97,19 +73,14 @@ def data_to_named_array(mat):
 
 
 def packed_data_to_named_array(
-    packed_data,
-    n_valid_items=None,
-    indices=None,
-    n_elements=None,
-    skip_unset_second_half=True,
+    packed_data, **kwargs
 ):
     """check packed bpm data and split it to a named array"""
     mat = unpack_and_validate_data(
-        packed_data,
-        n_valid_items=n_valid_items,
-        indices=indices,
-        n_elements=n_elements,
-        skip_unset_second_half=skip_unset_second_half,
+        packed_data, **kwargs,
+        # n_valid_items=n_valid_items,
+        # indices=indices,
+        # n_elements=n_elements,
     )
     t_array = data_to_named_array(mat)
     return t_array
@@ -170,7 +141,7 @@ def raw_to_scaled_data(a_array, bpm_parameters, bit_gain=None):
 
 
 def packed_data_to_scaled(
-    packed_data, *, bpm_parameters, n_valid_items=128, bit_gain=bit_gain_default
+    packed_data, *, bpm_parameters, n_valid_items=128, bit_gain=bit_gain_default, **kwargs
 ):
     """scaled bpm data from packed data
 
@@ -185,7 +156,7 @@ def packed_data_to_scaled(
     """
     indices = bpm_parameters["idx"] - 1
     raw = packed_data_to_named_array(
-        packed_data, n_valid_items=n_valid_items, indices=indices
+        packed_data, n_valid_items=n_valid_items, indices=indices, **kwargs
     )
     scaled = raw_to_scaled_data(raw, bpm_parameters=bpm_parameters, bit_gain=bit_gain)
 
