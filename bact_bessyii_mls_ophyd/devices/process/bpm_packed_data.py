@@ -3,7 +3,7 @@ import numpy as np
 from numpy.core.records import fromarrays
 from ..utils import process_vector
 
-logger = logging.getLogger("bact2")
+logger = logging.getLogger("bact")
 
 from dataclasses import dataclass
 
