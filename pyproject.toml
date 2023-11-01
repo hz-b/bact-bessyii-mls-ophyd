@@ -8,8 +8,9 @@ version = "0.0.1"
 description = "Ophyd Devices Common for Bessy II and Metrology Light Source."
 authors = [ "Pierre Schnizer", "Waheedullah Sulaiman Khail"]
 license = "GPL-3.0"
-homepage = ""
-repository = "https://github.com/hz-b/bact-bessyii-mls-ophyd"
+homepage = "https://github.com/hz-b/bact-bessyii-mls-ophyd"
+documentation = "https://github.com/hz-b/bact-bessyii-mls-ophyd.git"
+repository = "https://github.com/hz-b/bact-bessyii-mls-ophyd.git"
 keywords = []
 
 [tool.poetry.dependencies]
