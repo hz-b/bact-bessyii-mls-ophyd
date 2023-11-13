@@ -191,6 +191,7 @@ class BPMWaveform(Device):
             mat : a matrix of vectors containing the appropriate input data
         Todo:
             Analyse the status values !
+            To be removed
         """
 
         self.x.pos_raw.put(array["x_pos_raw"])
