@@ -1,10 +1,10 @@
 [build-system]
-requires = [ "poetry-core>=1.0.0","super_state_machine"]
+requires = [ "poetry-core>=1.0.0", "super_state_machine", "jsons"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "bact-bessyii-mls-ophyd"
-version = "0.0.1"
+version = "0.1.0"
 description = "Ophyd Devices Common for Bessy II and Metrology Light Source."
 authors = [ "Pierre Schnizer", "Waheedullah Sulaiman Khail"]
 license = "GPL-3.0"
