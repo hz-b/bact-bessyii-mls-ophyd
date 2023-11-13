@@ -2,7 +2,7 @@ from ophyd import sim
 
 
 class CounterSink(sim.SynAxisNoHints):
-    """Sink for a connter
+    """Sink for a counter
 
     Args:
         delay (default = 0) : how long to wait after a request was made
