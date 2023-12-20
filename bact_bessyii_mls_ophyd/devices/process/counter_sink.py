@@ -1,7 +1,7 @@
 from ophyd import sim
 
 
-class CounterSink(sim.SynAxisNoHints):
+class CounterSink(sim.SynAxis):
     """Sink for a counter
 
     Args:
