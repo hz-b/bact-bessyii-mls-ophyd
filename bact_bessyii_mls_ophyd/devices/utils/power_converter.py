@@ -22,7 +22,7 @@ class PowerConverter(_t_super):
     Currently only a device checking that the set and read value corresponds
 
     Todo:
-        Insist on an hyseteres is loop
+        Insist on an hysteresis loop
         Proper accuracy settings
 
         How to handle differences between MLS and BESSY II
@@ -38,8 +38,8 @@ class PowerConverter(_t_super):
 
     setpoint = Cpt(EpicsSignal, ":set")
     readback = Cpt(EpicsSignalRO, ":rdbk")
-    setpoint = Cpt(EpicsSignal, ":setCur")
-    readback = Cpt(EpicsSignalRO, ":rdCur")
+    # setpoint = Cpt(EpicsSignal, ":setCur")
+    # readback = Cpt(EpicsSignalRO, ":rdCur")
 
 
 class ResettingPowerConverter(PowerConverter):
