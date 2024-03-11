@@ -46,7 +46,7 @@ class ResettingPowerConverter(PowerConverter):
     """ """
 
     #: reference value to store
-    rv = Cpt(Signal, name="ref_val", value=np.nan)
+    rv = Cpt(Signal, name="ref_val", value=np.nan, kind=Kind.config)
 
     #: shall the component be set back
     set_back = Cpt(Signal, name="set_bak", value=False, kind=Kind.config)
