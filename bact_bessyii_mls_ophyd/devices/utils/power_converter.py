@@ -38,8 +38,8 @@ class PowerConverter(_t_super):
 
     setpoint = Cpt(EpicsSignal, ":set")
     readback = Cpt(EpicsSignalRO, ":rdbk")
-    setpoint = Cpt(EpicsSignal, ":setCur")
-    readback = Cpt(EpicsSignalRO, ":rdCur")
+    # setpoint = Cpt(EpicsSignal, ":setCur")
+    # readback = Cpt(EpicsSignalRO, ":rdCur")
 
 
 class ResettingPowerConverter(PowerConverter):
