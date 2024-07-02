@@ -6,7 +6,10 @@ build-backend = "poetry.core.masonry.api"
 name = "bact-bessyii-mls-ophyd"
 version = "0.1.0"
 description = "Ophyd Devices Common for Bessy II and Metrology Light Source."
-authors = [ "Pierre Schnizer", "Waheedullah Sulaiman Khail"]
+authors = [
+    {name =  "Pierre Schnizer", email = "pierre.schnizer@helmholtz-berlin.de"},
+    {name = "Waheedullah Sulaiman Khail", email = "waheedullah.sulaiman_khail@helmholtz-berlin.de"}
+]
 license = "GPL-3.0"
 homepage = "https://github.com/hz-b/bact-bessyii-mls-ophyd"
 documentation = "https://github.com/hz-b/bact-bessyii-mls-ophyd.git"
