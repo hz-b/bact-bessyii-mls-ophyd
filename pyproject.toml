@@ -18,5 +18,6 @@ python = ">=3.7"
 ophyd  = ">=1.5"
 # todo: find out minimum required instance
 ophyd-async  = "*"
+aioca = "*"
 # should also allow alternatics like caproto
 pyepics = "*"
