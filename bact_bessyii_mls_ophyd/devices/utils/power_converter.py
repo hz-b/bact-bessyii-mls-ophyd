@@ -1,9 +1,10 @@
+import asyncio
 from typing import Annotated as A
 
 import numpy as np
 from bluesky.protocols import Movable, Stoppable, SyncOrAsync, Stageable
 from ophyd_async.core import StandardReadable, SignalR, SignalRW, CALCULATE_TIMEOUT, CalculatableTimeout, observe_value, \
-    WatcherUpdate, WatchableAsyncStatus
+    WatcherUpdate, WatchableAsyncStatus, LazyMock, DEFAULT_TIMEOUT
 from ophyd_async.epics.core import EpicsDevice, PvSuffix, epics_signal_r, epics_signal_rw
 from ophyd_async.core import StandardReadableFormat as Format
 
@@ -32,7 +33,7 @@ class _PowerConverter(StandardReadable, Movable, Stoppable, Stageable):
         super().__init__(*args, **kwargs)
 
     @WatchableAsyncStatus.wrap
-    async def set(self, new_position: float, timeout: CalculatableTimeout = CALCULATE_TIMEOUT):
+    async def set(self, new_position: float, timeout: float=2.0):
         await self.setpoint.set(new_position, wait=False)
         async for current_position in observe_value(
                 self.readback, done_timeout=timeout
@@ -63,6 +64,11 @@ class _PowerConverter(StandardReadable, Movable, Stoppable, Stageable):
 
     def stop(self, success=True) -> SyncOrAsync[None]:
         self._set_success = success
+
+    async def connect(self, *args, **kwargs) -> None:
+        stat = super().connect()
+        r = await stat
+        return r
 
 
 class _ResettingPowerConverter(_PowerConverter):

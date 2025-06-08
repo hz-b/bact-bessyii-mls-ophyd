@@ -1,0 +1,55 @@
+from typing import Dict
+
+import numpy as np
+from bluesky.protocols import Reading
+from event_model import DataKey
+
+from bact_device_models.devices.orbit import (
+    BPMButtons,
+    BPMPosition,
+    BPMReading,
+    Orbit as OrbitModel,
+)
+
+from ..raw.orbit import Orbit as ROrbit
+
+
+class PPOrbit(ROrbit):
+    """Provide read in data as orbit model"""
+
+    async def describe(self) -> dict[str, DataKey]:
+        d = await super().describe()
+        d.pop(f"{self.name}_buttons")
+        d.pop(f"{self.name}_names")
+        rpos = d.pop(f"{self.name}_rpos")
+        L, = rpos["shape"]
+        assert L % 2 == 0
+        d2 = {"{self.name}_pos" : DataKey(source="", shape=[L//2], dtype="array")}
+        d.update(d2)
+        return d
+
+    async def read(self) -> Dict[str, Reading]:
+        data = await super().read()
+        # todo: has ophyd / bluesky a helper func for splitting the read data?
+        pos_pkg = data.pop(f"{self.name}_rpos")
+        btn_pkg = data.pop(f"{self.name}_buttons")
+        pos = np.reshape(pos_pkg["value"], (-1, 2))
+        btns = np.reshape(btn_pkg["value"], (-1, 4))
+        names = data.pop(f"{self.name}_names")["value"]
+        pos = {
+            f"{self.name}_pos": Reading(
+                timestamp=pos_pkg["timestamp"],
+                value=OrbitModel(
+                    orbit=[
+                        BPMReading(
+                            name=name,
+                            pos=BPMPosition(x=p[0], y=p[1]),
+                            btns=BPMButtons(*b),
+                        )
+                        for name, p, b in zip(names, pos, btns)
+                    ]
+                ),
+            )
+        }
+        data.update(pos)
+        return data
