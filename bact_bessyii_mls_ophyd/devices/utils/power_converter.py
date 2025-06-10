@@ -3,28 +3,33 @@ from typing import Annotated as A
 
 import numpy as np
 from bluesky.protocols import Movable, Stoppable, SyncOrAsync, Stageable
-from ophyd_async.core import StandardReadable, SignalR, SignalRW, CALCULATE_TIMEOUT, CalculatableTimeout, observe_value, \
-    WatcherUpdate, WatchableAsyncStatus, LazyMock, DEFAULT_TIMEOUT
-from ophyd_async.epics.core import EpicsDevice, PvSuffix, epics_signal_r, epics_signal_rw
+from ophyd_async.core import (
+    StandardReadable,
+    SignalR,
+    SignalRW,
+    observe_value,
+    WatcherUpdate,
+    WatchableAsyncStatus,
+    LazyMock,
+    CalculatableTimeout,
+    CALCULATE_TIMEOUT,
+    DEFAULT_TIMEOUT,
+)
+from ophyd_async.epics.core import (
+    EpicsDevice,
+    PvSuffix,
+    epics_signal_r,
+    epics_signal_rw,
+)
 from ophyd_async.core import StandardReadableFormat as Format
 
 
 class _PowerConverter(StandardReadable, Movable, Stoppable, Stageable):
     """A power converter abstraction
 
-    Currently only a device checking that the set and read value corresponds
-
-    Todo:
-        How to handle differences between MLS and BESSY II
-
-        BESSY II uses
-
-          ':set' / 'rdbk
-
-       MLS uses
-          ':setCur / :rdCur'
-
+    Checking that setpoint and readback correspond
     """
+
     _set_success = True
 
     def __init__(self, *args, **kwargs):
@@ -33,18 +38,18 @@ class _PowerConverter(StandardReadable, Movable, Stoppable, Stageable):
         super().__init__(*args, **kwargs)
 
     @WatchableAsyncStatus.wrap
-    async def set(self, new_position: float, timeout: float=2.0):
+    async def set(self, new_position: float, timeout: float = 2.0):
         # The move should complete successfully unless stop(success=False) is called
         self._set_success = True
         # Get some variables for the progress bar reporting
         old_position, units, precision = await asyncio.gather(
             self.setpoint.get_value(),
             self.units.get_value(),
-            self.precision.get_value()
+            self.precision.get_value(),
         )
         await self.setpoint.set(new_position, wait=False)
         async for current_position in observe_value(
-                self.readback, done_timeout=timeout
+            self.readback, done_timeout=timeout
         ):
             # Emit a progress bar update
             yield WatcherUpdate(
@@ -56,11 +61,10 @@ class _PowerConverter(StandardReadable, Movable, Stoppable, Stageable):
                 precision=precision,
             )
             # If we are at the desired position the break
-            if np.isclose(current_position, new_position):
+            if np.isclose(
+                current_position, new_position, atol=self.eps_abs, rtol=self.eps_rel
+            ):
                 break
-            else:
-                diff_position = current_position - new_position
-                continue
         # If we were told to stop and report an error then do so
         if not self._set_success:
             raise RuntimeError("Motor was stopped")
@@ -75,67 +79,101 @@ class _PowerConverter(StandardReadable, Movable, Stoppable, Stageable):
 
 
 class _ResettingPowerConverter(_PowerConverter):
-     """ """
+    """
+    WARNING:
+            unstested code!
+    """
 
-     def __init__(self, *args, **kwargs):
-         super().__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-         self.reference_value = kwargs.get("reference_value", None)
-         self.timeout = kwargs.get("timeout", 20)
-         self.settle_time = kwargs.get("settle_time", 0.5)
-         self.set_back = kwargs.get("set_back", False)
+        self.reference_value = kwargs.get("reference_value", None)
+        self.timeout = kwargs.get("timeout", 20)
+        self.settle_time = kwargs.get("settle_time", 0.5)
+        self.set_back = kwargs.get("set_back", False)
 
-     async def setToStoredValue(self):
-         if self.set_back and self.reference_value is not None:
-             val = self.reference_value
-             return await  self.setpoint.set(self.reference_value)
+    async def setToStoredValue(self):
+        if self.set_back and self.reference_value is not None:
+            val = self.reference_value
+            return await self.setpoint.set(self.reference_value)
 
-     async def stage(self):
-         """ """
-         self.reference_value = await self.setpoint.get()
-         return super().stage()
+    async def stage(self):
+        """ """
+        self.reference_value = await self.setpoint.get()
+        return super().stage()
 
-     def unstage(self):
-         """
+    def unstage(self):
+        """
 
-         Warning:
-             If the call to super is not here proper plans will stop
-             working at the second iteration
-         """
-         return super().unstage()
+        Warning:
+            If the call to super is not here proper plans will stop
+            working at the second iteration
+        """
+        return super().unstage()
 
-     async def stop(self, success=False):
-         return await self.setToStoredValue()
+    async def stop(self, success=False):
+        return self.setToStoredValue()
+
 
 class BESSYIIPowerConverter(EpicsDevice, _PowerConverter):
-    readback: A[SignalR[float], PvSuffix("rdbk"), Format.HINTED_SIGNAL]
-    setpoint: A[SignalRW[float], PvSuffix("set"), Format.UNCACHED_SIGNAL]
-    units: A[SignalR[str], PvSuffix("rdbk.EGU"), Format.CONFIG_SIGNAL]
-    precision: A[SignalR[int], PvSuffix("rdbk.PREC")]
+    """
+    Todo:
+        move to BESSY II specific part
+    """
+
+    # fmt:off
+    setpoint:  A[ SignalRW [ float ], PvSuffix( "set"       ), Format.UNCACHED_SIGNAL ]
+    readback:  A[ SignalR  [ float ], PvSuffix( "rdbk"      ), Format.HINTED_SIGNAL   ]
+    units:     A[ SignalR  [ str   ], PvSuffix( "rdbk.EGU"  ), Format.CONFIG_SIGNAL   ]
+    precision: A[ SignalR  [ int   ], PvSuffix( "rdbk.PREC" ), Format.CONFIG_SIGNAL   ]
+    # fmt:on
 
 
 class MLSPowerConverter(EpicsDevice, _PowerConverter):
-    readback: A[SignalR[float], PvSuffix("setCur"), Format.HINTED_SIGNAL]
-    setpoint: A[SignalRW[float], PvSuffix("rdCur"), Format.UNCACHED_SIGNAL]
-    units: A[SignalR[str], PvSuffix("rdCur.EGU"), Format.CONFIG_SIGNAL]
-    precision: A[SignalR[int], PvSuffix("setCur.PREC")]
+    """
+    Todo:
+        move to MLS specific part
+    """
+
+    # fmt:off
+    setpoint:  A[ SignalRW [ float ], PvSuffix( "setCur"      ), Format.UNCACHED_SIGNAL ]
+    readback:  A[ SignalR  [ float ], PvSuffix( "rdCur"       ), Format.HINTED_SIGNAL   ]
+    units:     A[ SignalR  [ str   ], PvSuffix( "rdCur.EGU"   ), Format.CONFIG_SIGNAL   ]
+    precision: A[ SignalR  [ int   ], PvSuffix( "setCur.PREC" ), Format.CONFIG_SIGNAL   ]
+    # fmt:on
 
 
 class PowerConverter(_PowerConverter):
-    """a power converter that allows overriding setpoint and readback suffix
-    """
-    def __init__(self, prefix: str, setpoint_suffix: str = None, readback_suffix: str = None, name = "", **kwargs):
+    """a power converter that allows overriding setpoint and readback suffix"""
+
+    def __init__(
+        self,
+        prefix: str,
+        setpoint_suffix: str = None,
+        readback_suffix: str = None,
+        name="",
+        **kwargs,
+    ):
         assert readback_suffix is not None
         assert setpoint_suffix is not None
 
         with self.add_children_as_readables():
-            self.readback = epics_signal_r(float, f"ca://{prefix}{readback_suffix}", name="rdbk")
-            self.units = epics_signal_r(str, f"ca://{prefix}{readback_suffix}.EGU", name="units")
-            self.precision = epics_signal_r(int, f"ca://{prefix}{readback_suffix}.PREC", name="prec")
-            self.setpoint = epics_signal_rw(float, f"ca://{prefix}{setpoint_suffix}", name="rdbk",)
+            self.readback = epics_signal_r(
+                float, f"ca://{prefix}{readback_suffix}", name="rdbk"
+            )
+            self.units = epics_signal_r(
+                str, f"ca://{prefix}{readback_suffix}.EGU", name="units"
+            )
+            self.precision = epics_signal_r(
+                int, f"ca://{prefix}{readback_suffix}.PREC", name="prec"
+            )
+            self.setpoint = epics_signal_rw(
+                float,
+                f"ca://{prefix}{setpoint_suffix}",
+                name="rdbk",
+            )
 
         super().__init__(name=name, **kwargs)
-
 
 
 if __name__ == "__main__":
@@ -143,9 +181,12 @@ if __name__ == "__main__":
 
     async def test():
         pc = BESSYIIPowerConverter("VS2P1T6R:", name="pc")
-        pc = PowerConverter("VS2P1T6R:", readback_suffix="rdbk", setpoint_suffix="set", name="pc")
+        pc = PowerConverter(
+            "VS2P1T6R:", readback_suffix="rdbk", setpoint_suffix="set", name="pc"
+        )
         await pc.connect()
         r = await pc.read()
         print(r)
         await pc.set(0.0)
+
     asyncio.run(test())
