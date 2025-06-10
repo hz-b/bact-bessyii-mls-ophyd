@@ -21,3 +21,7 @@ ophyd-async  = "*"
 aioca = "*"
 # should also allow alternatics like caproto
 pyepics = "*"
+
+
+[tool.poetry.dev-dependencies]
+pytest-asyncio = "*"
