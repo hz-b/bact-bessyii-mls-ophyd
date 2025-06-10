@@ -92,7 +92,7 @@ class _ResettingPowerConverter(_PowerConverter):
         self.settle_time = kwargs.get("settle_time", 0.5)
         self.set_back = kwargs.get("set_back", False)
 
-    async def setToStoredValue(self):
+    async def set_to_stored_value(self):
         if self.set_back and self.reference_value is not None:
             val = self.reference_value
             return await self.setpoint.set(self.reference_value)
@@ -112,7 +112,7 @@ class _ResettingPowerConverter(_PowerConverter):
         return super().unstage()
 
     async def stop(self, success=False):
-        return self.setToStoredValue()
+        return self.set_to_stored_value()
 
 
 class BESSYIIPowerConverter(EpicsDevice, _PowerConverter):
@@ -122,10 +122,10 @@ class BESSYIIPowerConverter(EpicsDevice, _PowerConverter):
     """
 
     # fmt:off
-    setpoint:  A[ SignalRW [ float ], PvSuffix( "set"       ), Format.UNCACHED_SIGNAL ]
-    readback:  A[ SignalR  [ float ], PvSuffix( "rdbk"      ), Format.HINTED_SIGNAL   ]
-    units:     A[ SignalR  [ str   ], PvSuffix( "rdbk.EGU"  ), Format.CONFIG_SIGNAL   ]
-    precision: A[ SignalR  [ int   ], PvSuffix( "rdbk.PREC" ), Format.CONFIG_SIGNAL   ]
+    setpoint:  A[ SignalRW [ float ], PvSuffix( "set"      ), Format.UNCACHED_SIGNAL ]
+    readback:  A[ SignalR  [ float ], PvSuffix( "rdbk"     ), Format.HINTED_SIGNAL   ]
+    units:     A[ SignalR  [ str   ], PvSuffix( "rdbk.EGU" ), Format.CONFIG_SIGNAL   ]
+    precision: A[ SignalR  [ int   ], PvSuffix( "set.PREC" ), Format.CONFIG_SIGNAL   ]
     # fmt:on
 
 
@@ -158,20 +158,13 @@ class PowerConverter(_PowerConverter):
         assert setpoint_suffix is not None
 
         with self.add_children_as_readables():
-            self.readback = epics_signal_r(
-                float, f"ca://{prefix}{readback_suffix}", name="rdbk"
-            )
-            self.units = epics_signal_r(
-                str, f"ca://{prefix}{readback_suffix}.EGU", name="units"
-            )
-            self.precision = epics_signal_r(
-                int, f"ca://{prefix}{readback_suffix}.PREC", name="prec"
-            )
-            self.setpoint = epics_signal_rw(
-                float,
-                f"ca://{prefix}{setpoint_suffix}",
-                name="rdbk",
-            )
+            # Todo: add hints
+            # fmt:off
+            self.setpoint  = epics_signal_rw ( float , f"ca://{prefix}{setpoint_suffix}"     , name="set"  )
+            self.readback  = epics_signal_r  ( float , f"ca://{prefix}{readback_suffix}"     , name="rdbk" )
+            self.units     = epics_signal_r  ( str   , f"ca://{prefix}{readback_suffix}.EGU",  name="units")
+            self.precision = epics_signal_r  ( int   , f"ca://{prefix}{readback_suffix}.PREC", name="prec" )
+            # fmt:on
 
         super().__init__(name=name, **kwargs)
 
