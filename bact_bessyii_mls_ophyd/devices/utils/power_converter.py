@@ -34,18 +34,18 @@ class _PowerConverter(StandardReadable, Movable, Stoppable, Stageable):
 
     @WatchableAsyncStatus.wrap
     async def set(self, new_position: float, timeout: float=2.0):
+        # The move should complete successfully unless stop(success=False) is called
+        self._set_success = True
+        # Get some variables for the progress bar reporting
+        old_position, units, precision = await asyncio.gather(
+            self.setpoint.get_value(),
+            self.units.get_value(),
+            self.precision.get_value()
+        )
         await self.setpoint.set(new_position, wait=False)
         async for current_position in observe_value(
                 self.readback, done_timeout=timeout
         ):
-            # The move should complete successfully unless stop(success=False) is called
-            self._set_success = True
-            # Get some variables for the progress bar reporting
-            old_position, units, precision =  await asyncio.gather(
-                self.setpoint.get_value(),
-                self.units.get_value(),
-                self.precision.get_value()
-            )
             # Emit a progress bar update
             yield WatcherUpdate(
                 current=current_position,
@@ -58,7 +58,10 @@ class _PowerConverter(StandardReadable, Movable, Stoppable, Stageable):
             # If we are at the desired position the break
             if np.isclose(current_position, new_position):
                 break
-            # If we were told to stop and report an error then do so
+            else:
+                diff_position = current_position - new_position
+                continue
+        # If we were told to stop and report an error then do so
         if not self._set_success:
             raise RuntimeError("Motor was stopped")
 
@@ -105,8 +108,8 @@ class _ResettingPowerConverter(_PowerConverter):
          return await self.setToStoredValue()
 
 class BESSYIIPowerConverter(EpicsDevice, _PowerConverter):
-    readback: A[SignalR[float], PvSuffix("set"), Format.HINTED_SIGNAL]
-    setpoint: A[SignalRW[float], PvSuffix("rdbk"), Format.UNCACHED_SIGNAL]
+    readback: A[SignalR[float], PvSuffix("rdbk"), Format.HINTED_SIGNAL]
+    setpoint: A[SignalRW[float], PvSuffix("set"), Format.UNCACHED_SIGNAL]
     units: A[SignalR[str], PvSuffix("rdbk.EGU"), Format.CONFIG_SIGNAL]
     precision: A[SignalR[int], PvSuffix("rdbk.PREC")]
 
