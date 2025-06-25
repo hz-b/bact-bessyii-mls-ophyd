@@ -156,6 +156,7 @@ class MultiplexerProxy(StandardReadable, Stageable):
         name: str = "",
         settable_devices: Dict[str, Union[Movable, StandardReadable, Stageable]],
         default_name: str = "",
+        ItemProxy=_MultiplexerItemProxy,
         **kwargs,
     ):
         with self.add_children_as_readables():
@@ -165,7 +166,7 @@ class MultiplexerProxy(StandardReadable, Stageable):
                 default_name=default_name,
                 acceptable_names=list(settable_devices.keys()),
             )
-            self.proxy = _MultiplexerItemProxy(
+            self.proxy = ItemProxy(
                 name=f"{name:}-proxy",  settable_devices=settable_devices
             )
             self.settable_devices = settable_devices
