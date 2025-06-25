@@ -1,30 +1,16 @@
 import asyncio
-from typing import Annotated as A
-
 import numpy as np
 from bluesky.protocols import Movable, Stoppable, SyncOrAsync, Stageable
 from ophyd_async.core import (
     StandardReadable,
-    SignalR,
-    SignalRW,
     observe_value,
     WatcherUpdate,
     WatchableAsyncStatus,
-    LazyMock,
-    CalculatableTimeout,
-    CALCULATE_TIMEOUT,
-    DEFAULT_TIMEOUT,
 )
-from ophyd_async.epics.core import (
-    EpicsDevice,
-    PvSuffix,
-    epics_signal_r,
-    epics_signal_rw,
-)
-from ophyd_async.core import StandardReadableFormat as Format
+from ophyd_async.epics.core import epics_signal_r, epics_signal_rw
 
 
-class _PowerConverter(StandardReadable, Movable, Stoppable, Stageable):
+class _SettableControllingDifference(StandardReadable, Movable, Stoppable, Stageable):
     """A power converter abstraction
 
     Checking that setpoint and readback correspond
@@ -33,8 +19,8 @@ class _PowerConverter(StandardReadable, Movable, Stoppable, Stageable):
     _set_success = True
 
     def __init__(self, *args, **kwargs):
-        self.eps_rel = kwargs.get("eps_rel", 6e-2)
-        self.eps_abs = kwargs.get("eps_abs", 1e-2)
+        self.eps_rel = kwargs.pop("eps_rel", 6e-2)
+        self.eps_abs = kwargs.pop("eps_abs", 1e-2)
         super().__init__(*args, **kwargs)
 
     @WatchableAsyncStatus.wrap
@@ -78,7 +64,7 @@ class _PowerConverter(StandardReadable, Movable, Stoppable, Stageable):
         return r
 
 
-class _ResettingPowerConverter(_PowerConverter):
+class _ResettingDevice(_SettableControllingDifference):
     """
     WARNING:
             unstested code!
@@ -115,35 +101,7 @@ class _ResettingPowerConverter(_PowerConverter):
         return self.set_to_stored_value()
 
 
-class BESSYIIPowerConverter(EpicsDevice, _PowerConverter):
-    """
-    Todo:
-        move to BESSY II specific part
-    """
-
-    # fmt:off
-    setpoint:  A[ SignalRW [ float ], PvSuffix( "set"      ), Format.UNCACHED_SIGNAL ]
-    readback:  A[ SignalR  [ float ], PvSuffix( "rdbk"     ), Format.HINTED_SIGNAL   ]
-    units:     A[ SignalR  [ str   ], PvSuffix( "rdbk.EGU" ), Format.CONFIG_SIGNAL   ]
-    precision: A[ SignalR  [ int   ], PvSuffix( "set.PREC" ), Format.CONFIG_SIGNAL   ]
-    # fmt:on
-
-
-class MLSPowerConverter(EpicsDevice, _PowerConverter):
-    """
-    Todo:
-        move to MLS specific part
-    """
-
-    # fmt:off
-    setpoint:  A[ SignalRW [ float ], PvSuffix( "setCur"      ), Format.UNCACHED_SIGNAL ]
-    readback:  A[ SignalR  [ float ], PvSuffix( "rdCur"       ), Format.HINTED_SIGNAL   ]
-    units:     A[ SignalR  [ str   ], PvSuffix( "rdCur.EGU"   ), Format.CONFIG_SIGNAL   ]
-    precision: A[ SignalR  [ int   ], PvSuffix( "setCur.PREC" ), Format.CONFIG_SIGNAL   ]
-    # fmt:on
-
-
-class PowerConverter(_PowerConverter):
+class PVPositionerIsClose(_SettableControllingDifference):
     """a power converter that allows overriding setpoint and readback suffix"""
 
     def __init__(
@@ -169,17 +127,4 @@ class PowerConverter(_PowerConverter):
         super().__init__(name=name, **kwargs)
 
 
-if __name__ == "__main__":
-    import asyncio
 
-    async def test():
-        pc = BESSYIIPowerConverter("VS2P1T6R:", name="pc")
-        pc = PowerConverter(
-            "VS2P1T6R:", readback_suffix="rdbk", setpoint_suffix="set", name="pc"
-        )
-        await pc.connect()
-        r = await pc.read()
-        print(r)
-        await pc.set(0.0)
-
-    asyncio.run(test())
