@@ -1,4 +1,4 @@
-name: Publish bact-mat-utils to PyPI and TestPyPI
+name: Publish bact-bessyii-mls-ophyd to PyPI and TestPyPI
 
 on: push
 
@@ -29,14 +29,14 @@ jobs:
 
   publish-to-pypi:
     name: >-
-      Publish accml distribution to PyPI
+      Publish bact-bessyii-mls-ophyd distribution to PyPI
     if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
     needs:
     - build
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/bact-math-utils  # Replace <package-name> with your PyPI project name
+      url: https://pypi.org/p/bact-bessyii-mls-ophyd  # Replace <package-name> with your PyPI project name
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
 
@@ -51,7 +51,7 @@ jobs:
 
   github-release:
     name: >-
-      Sign accl with Sigstore and upload them to GitHub Release
+      Sign bact-bessyii-mls-ophyd with Sigstore and upload them to GitHub Release
     needs:
     - publish-to-pypi
     runs-on: ubuntu-latest
@@ -92,7 +92,7 @@ jobs:
         --repo '${{ github.repository }}'
 
   publish-to-testpypi:
-    name: Publish bact-math-utils to TestPyPI
+    name: Publish bact-bessyii-mls-ophyd to TestPyPI
     needs:
     - build
     runs-on: ubuntu-latest
