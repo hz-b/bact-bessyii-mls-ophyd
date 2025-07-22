@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "bact-bessyii-mls-ophyd"
-version = "0.2.0"
+version = "0.4.0"
 description = "Ophyd Devices Common for Bessy II and Metrology Light Source."
 authors = ["Pierre Schnizer", "Waheedullah Sulaiman Khail"]
 license = "GPL-3.0"
@@ -17,7 +17,7 @@ keywords = []
 python = ">=3.7"
 ophyd  = ">=1.5"
 # todo: find out minimum required instance
-ophyd-async  = "*"
+ophyd-async  = ">=0.10"
 aioca = "*"
 # should also allow alternatics like caproto
 pyepics = "*"
