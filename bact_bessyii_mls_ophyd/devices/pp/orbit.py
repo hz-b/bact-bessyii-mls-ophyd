@@ -1,4 +1,5 @@
 from typing import Dict
+import jsons
 
 import numpy as np
 from bluesky.protocols import Reading
@@ -13,31 +14,38 @@ from bact_device_models.devices.orbit import (
 
 from ..raw.orbit import Orbit as ROrbit
 
+import logging
+
+logger = logging.getLogger("bact-bessyii-mls-ophyd")
+
 
 class PPOrbit(ROrbit):
     """Provide read in data as orbit model"""
 
     async def describe(self) -> dict[str, DataKey]:
         d = await super().describe()
-        d.pop(f"{self.name}_buttons")
-        d.pop(f"{self.name}_names")
-        rpos = d.pop(f"{self.name}_rpos")
+        d.pop(f"{self.name}-btns")
+        # d.pop(f"{self.name}_names")
+        rpos = d.pop(f"{self.name}-rpos")
         L, = rpos["shape"]
         assert L % 2 == 0
-        d2 = {"{self.name}_pos" : DataKey(source="", shape=[L//2], dtype="array")}
+        d2 = {f"{self.name}-pos" : DataKey(source="", shape=[L//2], dtype="array")}
         d.update(d2)
         return d
 
     async def read(self) -> Dict[str, Reading]:
         data = await super().read()
+        data_names = await self.names.read()
         # todo: has ophyd / bluesky a helper func for splitting the read data?
-        pos_pkg = data.pop(f"{self.name}_rpos")
-        btn_pkg = data.pop(f"{self.name}_buttons")
+
+        # logger.warning(f"{list(data)}")
+        pos_pkg = data.pop(f"{self.name}-rpos")
+        btn_pkg = data.pop(f"{self.name}-btns")
         pos = np.reshape(pos_pkg["value"], (-1, 2))
         btns = np.reshape(btn_pkg["value"], (-1, 4))
-        names = data.pop(f"{self.name}_names")["value"]
+        names = data_names.pop(f"{self.name}-names")["value"]
         pos = {
-            f"{self.name}_pos": Reading(
+            f"{self.name}-pos": Reading(
                 timestamp=pos_pkg["timestamp"],
                 value=OrbitModel(
                     orbit=[
@@ -52,4 +60,4 @@ class PPOrbit(ROrbit):
             )
         }
         data.update(pos)
-        return data
+        return jsons.dump(data)
