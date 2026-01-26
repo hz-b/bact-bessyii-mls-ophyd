@@ -50,9 +50,9 @@ class PPOrbit(ROrbit):
                 value=OrbitModel(
                     orbit=[
                         BPMReading(
-                            name=name,
-                            pos=BPMPosition(x=p[0], y=p[1]),
-                            btns=BPMButtons(*b),
+                            name=str(name),
+                            pos=BPMPosition(x=float(p[0]), y=float(p[1])),
+                            btns=BPMButtons(*map(float, b)),
                         )
                         for name, p, b in zip(names, pos, btns)
                     ]
