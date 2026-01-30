@@ -8,8 +8,8 @@ from ophyd_async.epics.core import EpicsDevice, PvSuffix
 
 class Orbit(StandardReadable, EpicsDevice):
     # fmt:off
-    names: A[ SignalR[Sequence[str]        ], PvSuffix("rdBpmNames"), Format.CONFIG_SIGNAL]
-    spos:  A[ SignalR[ Array1D[np.float64] ], PvSuffix("rdSPos"), Format.CONFIG_SIGNAL]
+    names: A[ SignalR[ Sequence[str]       ], PvSuffix( "rdBpmNames" ), Format.CONFIG_SIGNAL   ]
+    spos:  A[ SignalR[ Array1D[np.float64] ], PvSuffix( "rdSPos"     ), Format.CONFIG_SIGNAL   ]
 
     count: A[ SignalR[ int                 ], PvSuffix( "count"      ), Format.UNCACHED_SIGNAL ]
 
