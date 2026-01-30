@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from typing import Dict
 
 import numpy as np
@@ -21,9 +22,9 @@ class PPOrbit(ROrbit):
         d = await super().describe()
         d.pop(f"{self.name}-btns")
         rpos = d.pop(f"{self.name}-rpos")
-        L, = rpos["shape"]
+        (L,) = rpos["shape"]
         assert L % 2 == 0
-        d2 = {"{self.name}-pos" : DataKey(source="", shape=[L//2], dtype="array")}
+        d2 = {f"{self.name}-pos": DataKey(source="", shape=[], dtype="array")}
         d.update(d2)
         return d
 
@@ -34,20 +35,20 @@ class PPOrbit(ROrbit):
         btn_pkg = data.pop(f"{self.name}-btns")
         pos = np.reshape(pos_pkg["value"], (-1, 2))
         btns = np.reshape(btn_pkg["value"], (-1, 4))
-        names = await self.names.read()
+        names = await self.names.get_value()
+        value = OrbitModel(
+            orbit=[
+                BPMReading(
+                    name=name,
+                    pos=BPMPosition(*p),
+                    btns=BPMButtons(*b),
+                )
+                for name, p, b in zip(names, pos, btns)
+            ]
+        )
         pos = {
             f"{self.name}-pos": Reading(
-                timestamp=pos_pkg["timestamp"],
-                value=OrbitModel(
-                    orbit=[
-                        BPMReading(
-                            name=name,
-                            pos=BPMPosition(x=float(p[0]), y=float(p[1])),
-                            btns=BPMButtons(*map(float, b)),
-                        )
-                        for name, p, b in zip(names, pos, btns)
-                    ]
-                ),
+                timestamp=pos_pkg["timestamp"], value=asdict(value)
             )
         }
         data.update(pos)
