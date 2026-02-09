@@ -11,8 +11,8 @@ import jsons
 from bact_bessyii_mls_ophyd.devices.pp.bpm_collection import BPMCollection
 from bact_device_models.devices.bpm_turn_by_turn_data import (
     BPMTurnByTurnDataCollection,
-    BPMTurnByTurnData,
-)
+    BPMTurnByTurnData, )
+from bact_device_models.devices import data_window
 from bact_bessyii_mls_ophyd.devices.pp.bpm import BPM
 
 valid_keys = Literal["x", "y", "name", "timestamp"]
@@ -22,20 +22,19 @@ def enforce_basis_types(
     data: Dict[valid_keys, Union[Sequence[int], float, str]]
 ) -> Dict[str, Union[Sequence[int], float, str]]:
     """But ensure that the data is really that way ..."""
-    return dict(
-        x=[int(v) for v in data["x"]],
-        y=[int(v) for v in data["y"]],
-        name=str(data["name"]),
-        timestamp=data["timestamp"],
-    )
+    data = data.copy()
+    data["x"] = list(map(int, data.pop("x")))
+    data["y"] = list(map(int, data.pop("y")))
+    data["name"] = str(data.pop("name"))
+    return data
 
 
 async def main():
     col = BPMCollection(
         name="bpms",
         devices=[
-            BPM(prefix="BPMZ41D1R:", name="bpmz41"),
-            BPM(prefix="BPMZ42D1R:", name="bpmz42"),
+            BPM(prefix="BPMZ41D1R:", name="bpmz41", select_slice=slice(0, 2000)),
+            BPM(prefix="BPMZ42D1R:", name="bpmz42", select_slice=slice(0, 2000)),
         ],
         combine_suffixes=["tbt"],
     )
