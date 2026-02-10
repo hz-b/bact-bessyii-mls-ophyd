@@ -27,6 +27,8 @@ class _SettableControllingDifference(StandardReadable, Movable, Stoppable, Stage
     async def set(self, new_position: float, timeout: float = 2.0):
         # The move should complete successfully unless stop(success=False) is called
         self._set_success = True
+
+        self.log.debug("setting to {new_position=}")
         # Get some variables for the progress bar reporting
         old_position, units, precision = await asyncio.gather(
             self.setpoint.get_value(),
@@ -50,7 +52,19 @@ class _SettableControllingDifference(StandardReadable, Movable, Stoppable, Stage
             if np.isclose(
                 current_position, new_position, atol=self.eps_abs, rtol=self.eps_rel
             ):
+                self.log.debug(
+                    "close enough at"
+                    f" {current_position=}, {new_position=}"
+                    f" {self.eps_abs=}, {self.eps_rel=}"
+                )
                 break
+            else:
+                self.log.debug(
+                    "not close enough at"
+                    f" {current_position=}, {new_position=}"
+                    f" {self.eps_abs=}, {self.eps_rel=}"
+                )
+
         # If we were told to stop and report an error then do so
         if not self._set_success:
             raise RuntimeError("Motor was stopped")
@@ -125,6 +139,3 @@ class PVPositionerIsClose(_SettableControllingDifference):
             # fmt:on
 
         super().__init__(name=name, **kwargs)
-
-
-
