@@ -35,7 +35,8 @@ class _SettableControllingDifference(StandardReadable, Movable, Stoppable, Stage
             self.units.get_value(),
             self.precision.get_value(),
         )
-        await self.setpoint.set(new_position, wait=False)
+        # Signal .set does not support wait any more ?
+        await self.setpoint.set(new_position)
         async for current_position in observe_value(
             self.readback, done_timeout=timeout
         ):
