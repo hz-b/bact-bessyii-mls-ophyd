@@ -5,14 +5,14 @@ from ophyd_async.core import StandardReadableFormat as Format
 from ophyd_async.epics.core import EpicsDevice, PvSuffix, epics_signal_r
 from ophyd_async.core import Table
 
-class Orbit(StandardReadable):
-    # fmt:on
-    # data: A[ SignalR [ Table ], PvSuffix( ":rdBPM"      ), Format.UNCACHED_SIGNAL ]
 
-     def __init__(self, prefix: str, *, name: str):
-        with self.add_children_as_readables():
-            self.data = epics_signal_r(Table, f"{prefix}:rdBPM")
-        super().__init__(name=name)
+class Orbit(StandardReadable, EpicsDevice):
+    # fmt:on
+    data: A[ SignalR[Table], PvSuffix( ":rdBPM" ), Format.UNCACHED_SIGNAL ]
+    # fmt:off
+
+
+__all__ = ["Orbit"]
 
 
 if __name__ == "__main__":
