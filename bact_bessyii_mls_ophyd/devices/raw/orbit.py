@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # that's the advantage of the table ... just read what you get
     # so could be sufficient to just read it in this manner
     # but don't forget it to give it a name ... otherwise it
-    # ·uses an empty string
+    # uses an empty string
     orbit_pv = epics_signal_r(Table, "pva://ORBITCC:rdBPM", name="orbit")
 
     orbit = Orbit("pva://ORBITCC", name="orb")
