@@ -8,7 +8,7 @@ from ophyd_async.core import Table
 
 class Orbit(StandardReadable, EpicsDevice):
     # fmt:on
-    data: A[ SignalR[Table], PvSuffix( ":rdBPM" ), Format.UNCACHED_SIGNAL ]
+    data: A[ SignalR[Table], PvSuffix( ":rdBpm" ), Format.UNCACHED_SIGNAL ]
     # fmt:off
 
 
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # so could be sufficient to just read it in this manner
     # but don't forget it to give it a name ... otherwise it
     # uses an empty string
-    orbit_pv = epics_signal_r(Table, "pva://ORBITCC:rdBPM", name="orbit")
+    orbit_pv = epics_signal_r(Table, "pva://ORBITCC:rdBpm", name="orbit")
 
     orbit = Orbit("pva://ORBITCC", name="orb")
 

@@ -51,12 +51,12 @@ class Orbit(ROrbit):
                 )
                 for name, x, y, a, b, c, d in zip(
                     table.BPM,
-                    table.PosX,
-                    table.PosY,
-                    table.ButtonA,
-                    table.ButtonB,
-                    table.ButtonC,
-                    table.ButtonD,
+                    table.X,
+                    table.Y,
+                    table.A,
+                    table.B,
+                    table.C,
+                    table.D,
                 )
             ]
         )
@@ -64,16 +64,16 @@ class Orbit(ROrbit):
         # Todo: this storage could be more efficient
         #       store it in this manner if it works
         #       currently everything is stored as a string
-        # additional = {
-        #     f"{self.name}-pos": Reading(
-        #         timestamp=t_data["timestamp"], value=asdict(value)
-        #     ),
+        additional = {
+             f"{self.name}-pos": Reading(
+                 timestamp=t_data["timestamp"], value=asdict(value)
+             ),
         #     # can it store it if it was a numpy table?
         #     f"{self.name}-data": Reading(
         #         timestamp=t_data["timestamp"], value=table_bytes_to_str(table)
         #     ),
-        # }
-        # data.update(additional)
+        }
+        data.update(additional)
         return data
 
 
