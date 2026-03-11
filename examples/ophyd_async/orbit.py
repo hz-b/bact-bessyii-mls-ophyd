@@ -1,11 +1,11 @@
 import asyncio
 import pprint
 
-from bact_bessyii_mls_ophyd.devices.pp.orbit import PPOrbit
+from bact_bessyii_mls_ophyd.devices.pp.orbit import Orbit
 
 
 async def main():
-    orbit = PPOrbit("pva://ORBITCC", name="orb")
+    orbit = Orbit("pva://ORBITCC", name="orb")
     await orbit.connect()
     cfg = await orbit.read_configuration()
     print("Configuration")
@@ -15,6 +15,7 @@ async def main():
     data= await orbit.read()
     print("Data")
     pprint.pprint(data)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

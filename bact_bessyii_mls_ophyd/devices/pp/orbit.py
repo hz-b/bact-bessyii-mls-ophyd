@@ -1,7 +1,6 @@
 from dataclasses import asdict
 from typing import Dict
 
-import numpy as np
 from bluesky.protocols import Reading
 from event_model import DataKey
 
@@ -13,21 +12,33 @@ from bact_device_models.devices.orbit import (
 )
 
 from ..raw.orbit import Orbit as ROrbit
+import json
+import numpy as np
 
 
-class PPOrbit(ROrbit):
+class Orbit(ROrbit):
     """Provide read in data as orbit model"""
 
     async def describe(self) -> dict[str, DataKey]:
         d = await super().describe()
-        d2 = {f"{self.name}-pos": DataKey(source="", shape=[], dtype="array")}
+        # Table not json serializable
+        tmp = d.pop(f"{self.name}-data")
+        d2 = {
+            f"{self.name}-pos": DataKey(source=tmp["source"], shape=[], dtype="array"),
+            f"{self.name}-data": DataKey(
+                source=tmp["source"],
+                shape=[9] + tmp["shape"],
+                dtype="array",
+                dtype_numpy=table_bytes_to_str_dtype(tmp["dtype_numpy"]),
+            ),
+        }
         d.update(d2)
         return d
 
     async def read(self) -> Dict[str, Reading]:
         data = await super().read()
         # todo: has ophyd / bluesky a helper func for splitting the read data?
-        t_data = data[f"{self.name}-data"]
+        t_data = data.pop(f"{self.name}-data")
         table = t_data["value"]
         value = OrbitModel(
             orbit=[
@@ -38,15 +49,43 @@ class PPOrbit(ROrbit):
                 )
                 for name, x, y, a, b, c, d in zip(
                     table.BPM,
-                    table.PosX, table.PosY,
-                    table.ButtonA, table.ButtonB, table.ButtonC, table.ButtonD
+                    table.PosX,
+                    table.PosY,
+                    table.ButtonA,
+                    table.ButtonB,
+                    table.ButtonC,
+                    table.ButtonD,
                 )
             ]
         )
-        pos = {
+
+        additional = {
             f"{self.name}-pos": Reading(
                 timestamp=t_data["timestamp"], value=asdict(value)
-            )
+            ),
+            # can it store it if it was a numpy table?
+            f"{self.name}-data": Reading(
+                timestamp=t_data["timestamp"], value=table_bytes_to_str(table)
+            ),
         }
-        data.update(pos)
+        data.update(additional)
         return data
+
+
+def table_bytes_to_str_dtype(descr):
+    return [(name, type.replace("S", "U")) for name, type in descr]
+
+
+def table_bytes_to_str(table):
+    dtype = table.numpy_dtype()
+    ndtype = table_bytes_to_str_dtype(dtype.descr)
+    data = np.empty([len(table.PosX)], dtype=ndtype)
+    for name, ttype in data.dtype.descr:
+        tmp = getattr(table, name)
+        if "U" in ttype:
+            tmp = np.asarray(tmp).astype("U")
+        data[name] = tmp
+    return data
+
+
+__all__ = ["Orbit"]
