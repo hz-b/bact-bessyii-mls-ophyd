@@ -21,7 +21,7 @@ ophyd-async  = ">=0.10"
 aioca = "*"
 # should also allow alternatics like caproto
 pyepics = "*"
-
+bact-device-models = ">=0.2.0"
 
 [tool.poetry.dev-dependencies]
 pytest-asyncio = "*"
