@@ -25,12 +25,14 @@ class Orbit(ROrbit):
         tmp = d.pop(f"{self.name}-data")
         d2 = {
             f"{self.name}-pos": DataKey(source=tmp["source"], shape=[], dtype="array"),
-            f"{self.name}-data": DataKey(
-                source=tmp["source"],
-                shape=[9] + tmp["shape"],
-                dtype="array",
-                dtype_numpy=table_bytes_to_str_dtype(tmp["dtype_numpy"]),
-            ),
+            # Todo: need to describe the data properly so that it fits into the
+            # data model
+            # f"{self.name}-data": DataKey(
+            #     source=tmp["source"],
+            #     shape=[9] + tmp["shape"],
+            #     dtype="array",
+            #     dtype_numpy=table_bytes_to_str_dtype(tmp["dtype_numpy"]),
+            # ),
         }
         d.update(d2)
         return d
@@ -59,16 +61,19 @@ class Orbit(ROrbit):
             ]
         )
 
-        additional = {
-            f"{self.name}-pos": Reading(
-                timestamp=t_data["timestamp"], value=asdict(value)
-            ),
-            # can it store it if it was a numpy table?
-            f"{self.name}-data": Reading(
-                timestamp=t_data["timestamp"], value=table_bytes_to_str(table)
-            ),
-        }
-        data.update(additional)
+        # Todo: this storage could be more efficient
+        #       store it in this manner if it works
+        #       currently everything is stored as a string
+        # additional = {
+        #     f"{self.name}-pos": Reading(
+        #         timestamp=t_data["timestamp"], value=asdict(value)
+        #     ),
+        #     # can it store it if it was a numpy table?
+        #     f"{self.name}-data": Reading(
+        #         timestamp=t_data["timestamp"], value=table_bytes_to_str(table)
+        #     ),
+        # }
+        # data.update(additional)
         return data
 
 

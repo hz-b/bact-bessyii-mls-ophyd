@@ -7,13 +7,13 @@ from databroker import catalog
 from bluesky import RunEngine
 import bluesky.plans as bp
 
-from bact_bessyii_mls_ophyd.devices.pp.orbit import PPOrbit
-from bact_device_models.devices.orbit import BPMReading, Orbit, BPMButtons, BPMPosition
+from bact_bessyii_mls_ophyd.devices.pp.orbit import Orbit
+# from bact_device_models.devices.orbit import BPMReading, Orbit, BPMButtons, BPMPosition
 
 
 async def measure() -> str:
 
-    orb = PPOrbit("ORBITCC:", name="orbit")
+    orb = Orbit("pva://ORBITCC", name="orbit")
     await orb.connect()
 
     RE=RunEngine({"target": "test_run"})
