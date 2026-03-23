@@ -42,7 +42,15 @@ class Orbit(ROrbit):
 
     Each column becomes a clean (time, n_bpms) DataArray in the resulting
     xarray Dataset.
+
+    BPM names are static within a run — they are emitted only on the first
+    read() call to avoid storing ~31 KB of redundant string data on every
+    event (~250 MB saved per 8000-event run).
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._bpm_names_emitted = False
 
     # ------------------------------------------------------------------
     # describe
@@ -63,7 +71,7 @@ class Orbit(ROrbit):
                 dtype_numpy="<f8",
             )
 
-        # BPM names as a fixed-length unicode array.
+        # BPM names: described in schema but only emitted once in read().
         d[f"{self.name}-bpm-names"] = DataKey(
             source=tmp["source"],
             shape=[n_bpms],
@@ -95,10 +103,13 @@ class Orbit(ROrbit):
                 value=structured[col],       # 1-D float array, zero-copy slice
             )
 
-        data[f"{self.name}-bpm-names"] = Reading(
-            timestamp=ts,
-            value=structured["BPM"],         # already unicode from table_to_structured_array
-        )
+        # BPM names are static — emit only on the first read of each run.
+        if not self._bpm_names_emitted:
+            data[f"{self.name}-bpm-names"] = Reading(
+                timestamp=ts,
+                value=structured["BPM"],
+            )
+            self._bpm_names_emitted = True
 
         return data
 
