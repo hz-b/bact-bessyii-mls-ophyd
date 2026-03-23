@@ -43,14 +43,11 @@ class Orbit(ROrbit):
     Each column becomes a clean (time, n_bpms) DataArray in the resulting
     xarray Dataset.
 
-    BPM names are static within a run — they are emitted only on the first
-    read() call to avoid storing ~31 KB of redundant string data on every
-    event (~250 MB saved per 8000-event run).
+    BPM names are static within a run. They are still emitted on every
+    event (required by event_model validation) but are also stored in
+    read_configuration() so that downstream code can access them cheaply
+    without scanning the full event stream.
     """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._bpm_names_emitted = False
 
     # ------------------------------------------------------------------
     # describe
@@ -71,7 +68,7 @@ class Orbit(ROrbit):
                 dtype_numpy="<f8",
             )
 
-        # BPM names: described in schema but only emitted once in read().
+        # BPM names — must appear in every event (event_model requirement).
         d[f"{self.name}-bpm-names"] = DataKey(
             source=tmp["source"],
             shape=[n_bpms],
@@ -79,6 +76,36 @@ class Orbit(ROrbit):
             dtype_numpy=f"<U{_MAX_BPM_NAME_LEN}",
         )
 
+        return d
+
+    # ------------------------------------------------------------------
+    # describe_configuration / read_configuration
+    # ------------------------------------------------------------------
+
+    async def describe_configuration(self) -> dict[str, DataKey]:
+        d = await super().describe_configuration()
+        # Declare BPM names as configuration — stored once in the
+        # descriptor document, not repeated in every event.
+        t_data = (await super().read())[f"{self.name}-data"]
+        table  = t_data["value"]
+        n_bpms = len(table.BPM)
+        d[f"{self.name}-bpm-names-config"] = DataKey(
+            source=f"pva://ORBITCC:rdBpm",
+            shape=[n_bpms],
+            dtype="array",
+            dtype_numpy=f"<U{_MAX_BPM_NAME_LEN}",
+        )
+        return d
+
+    async def read_configuration(self) -> Dict[str, Reading]:
+        d = await super().read_configuration()
+        # Read BPM names once and store them as configuration.
+        t_data = (await super().read())[f"{self.name}-data"]
+        table  = t_data["value"]
+        d[f"{self.name}-bpm-names-config"] = Reading(
+            timestamp=t_data["timestamp"],
+            value=np.asarray(table.BPM).astype("U"),
+        )
         return d
 
     # ------------------------------------------------------------------
@@ -103,13 +130,12 @@ class Orbit(ROrbit):
                 value=structured[col],       # 1-D float array, zero-copy slice
             )
 
-        # BPM names are static — emit only on the first read of each run.
-        if not self._bpm_names_emitted:
-            data[f"{self.name}-bpm-names"] = Reading(
-                timestamp=ts,
-                value=structured["BPM"],
-            )
-            self._bpm_names_emitted = True
+        # BPM names must be present on every event (event_model validation).
+        # They are also stored cheaply in read_configuration() above.
+        data[f"{self.name}-bpm-names"] = Reading(
+            timestamp=ts,
+            value=structured["BPM"],
+        )
 
         return data
 
