@@ -17,8 +17,9 @@ def table_bytes_to_str_dtype(descr):
 def table_to_structured_array(table) -> np.ndarray:
     """
     Convert a bluesky/ophyd Table into a numpy structured array.
-    Kept here for reference but no longer used in read() directly —
-    we split into flat columns for xarray compatibility.
+    We split into flat columns for xarray compatibility in read(),
+    but building the structured array first ensures all columns are
+    processed consistently in one place.
     """
     raw_dtype = table.numpy_dtype()
     str_dtype = table_bytes_to_str_dtype(raw_dtype.descr)
@@ -34,23 +35,27 @@ def table_to_structured_array(table) -> np.ndarray:
 
 class Orbit(ROrbit):
     """
-    Efficient orbit reader — Option C fixed.
+    Efficient orbit reader — Option C final.
 
     The structured array is built internally (preserving the data model)
     but stored as separate flat 1-D numpy arrays per column so that
     xarray/databroker can load them without a dimension mismatch.
 
-    Each column becomes a clean (time, n_bpms) DataArray in the resulting
-    xarray Dataset.
+    Each numeric column becomes a clean (time, n_bpms) DataArray in the
+    resulting xarray Dataset.
 
-    BPM names are static within a run. They are still emitted on every
-    event (required by event_model validation) but are also stored in
-    read_configuration() so that downstream code can access them cheaply
-    without scanning the full event stream.
+    BPM names are static within a run and are intentionally kept OUT of
+    describe() so that event_model never requires them in every event
+    document. Instead they are stored exactly once in read_configuration(),
+    which bluesky calls once at the start of each run and writes into the
+    configuration document — not the event stream.
+
+    Access after the run:
+        run.primary.config['orb']['orb-bpm-names']
     """
 
     # ------------------------------------------------------------------
-    # describe
+    # describe — numeric columns only, no BPM names
     # ------------------------------------------------------------------
 
     async def describe(self) -> dict[str, DataKey]:
@@ -59,7 +64,8 @@ class Orbit(ROrbit):
         tmp = d.pop(f"{self.name}-data")     # remove the raw table key
         n_bpms = tmp["shape"][0]             # first dim = number of BPMs
 
-        # One DataKey per numeric column.
+        # Numeric columns only — BPM names deliberately excluded so they
+        # are never demanded in every event by event_model validation.
         for col in _NUMERIC_COLS:
             d[f"{self.name}-{col.lower()}"] = DataKey(
                 source=tmp["source"],
@@ -68,28 +74,17 @@ class Orbit(ROrbit):
                 dtype_numpy="<f8",
             )
 
-        # BPM names — must appear in every event (event_model requirement).
-        d[f"{self.name}-bpm-names"] = DataKey(
-            source=tmp["source"],
-            shape=[n_bpms],
-            dtype="array",
-            dtype_numpy=f"<U{_MAX_BPM_NAME_LEN}",
-        )
-
         return d
 
     # ------------------------------------------------------------------
-    # describe_configuration / read_configuration
+    # describe_configuration / read_configuration — BPM names stored once
     # ------------------------------------------------------------------
 
     async def describe_configuration(self) -> dict[str, DataKey]:
         d = await super().describe_configuration()
-        # Declare BPM names as configuration — stored once in the
-        # descriptor document, not repeated in every event.
         t_data = (await super().read())[f"{self.name}-data"]
-        table  = t_data["value"]
-        n_bpms = len(table.BPM)
-        d[f"{self.name}-bpm-names-config"] = DataKey(
+        n_bpms = len(t_data["value"].BPM)
+        d[f"{self.name}-bpm-names"] = DataKey(
             source=f"pva://ORBITCC:rdBpm",
             shape=[n_bpms],
             dtype="array",
@@ -99,17 +94,17 @@ class Orbit(ROrbit):
 
     async def read_configuration(self) -> Dict[str, Reading]:
         d = await super().read_configuration()
-        # Read BPM names once and store them as configuration.
         t_data = (await super().read())[f"{self.name}-data"]
         table  = t_data["value"]
-        d[f"{self.name}-bpm-names-config"] = Reading(
+        # BPM names written once into the configuration document.
+        d[f"{self.name}-bpm-names"] = Reading(
             timestamp=t_data["timestamp"],
             value=np.asarray(table.BPM).astype("U"),
         )
         return d
 
     # ------------------------------------------------------------------
-    # read
+    # read — numeric columns only, zero BPM name overhead per event
     # ------------------------------------------------------------------
 
     async def read(self) -> Dict[str, Reading]:
@@ -119,23 +114,13 @@ class Orbit(ROrbit):
         table  = t_data["value"]
         ts     = t_data["timestamp"]
 
-        # Build the structured array internally — preserves the data model
-        # and ensures all columns are processed consistently.
         structured = table_to_structured_array(table)
 
-        # Split into flat columns for xarray compatibility.
         for col in _NUMERIC_COLS:
             data[f"{self.name}-{col.lower()}"] = Reading(
                 timestamp=ts,
-                value=structured[col],       # 1-D float array, zero-copy slice
+                value=structured[col],       # zero-copy slice
             )
-
-        # BPM names must be present on every event (event_model validation).
-        # They are also stored cheaply in read_configuration() above.
-        data[f"{self.name}-bpm-names"] = Reading(
-            timestamp=ts,
-            value=structured["BPM"],
-        )
 
         return data
 
