@@ -18,6 +18,7 @@ class BPM(BPMR):
         d = await super().describe()
         x = d.pop(f"{self.name}-x")
         y = d.pop(f"{self.name}-y")
+        sum = d.pop(f"{self.name}-sum")
         d2 = {f"{self.name}-tbt": DataKey(source="", shape=[], dtype="array")}
         d.update(d2)
         return d
@@ -25,7 +26,9 @@ class BPM(BPMR):
     async def read(self) -> dict[str, Reading]:
         data = await super().read()
         tbt = turn_by_turn_signals_to_data_model(
-            data.pop(f"{self.name}-x"), data.pop(f"{self.name}-y"),
+            data.pop(f"{self.name}-x"),
+            data.pop(f"{self.name}-y"),
+            data.pop(f"{self.name}-sum"),
             self.select_slice, self.name
         )
         data.update(tbt)
@@ -33,7 +36,7 @@ class BPM(BPMR):
 
 
 def turn_by_turn_signals_to_data_model(
-    x: Reading, y: Reading, t_slice: slice, name: str
+        x: Reading, y: Reading, sum_: Reading, t_slice: slice, name: str
 ) -> Dict[str, Reading]:
     tx = x["timestamp"]
     ty = y["timestamp"]
@@ -41,6 +44,7 @@ def turn_by_turn_signals_to_data_model(
     dm = BPMTurnByTurnData(
         x=x["value"][t_slice],
         y=y["value"][t_slice],
+        sum=sum_["value"][t_slice],
         name=name,
         # Timestamps can not be added if these are datetimes
         timestamp=t,

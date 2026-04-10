@@ -27,7 +27,7 @@ async def retrieve(uuid: str):
     run = db[uuid]
     data = run.primary.read()
     orbit_data = [jsons.load(datum) for datum in data["orbit-pos"].data]
-    pprint.pprint(orbit_data)
+    pprint.pprint(orbit_data, compact=True, width=120)
 
 
 async def main():

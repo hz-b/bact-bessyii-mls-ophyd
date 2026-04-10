@@ -20,8 +20,9 @@ from ..utils.utils import wait_for_new_value
 
 class BPM(EpicsDevice, StandardReadable, Triggerable):
     # fmt:off
-    x: A[ SignalR[ Array1D[np.int32] ], PvSuffix("signals:tdp_synth.X"), Format.UNCACHED_SIGNAL ]
-    y: A[ SignalR[ Array1D[np.int32] ], PvSuffix("signals:tdp_synth.Y"), Format.UNCACHED_SIGNAL ]
+    x:   A[ SignalR[ Array1D[np.int32] ], PvSuffix("signals:tdp_synth.X"), Format.UNCACHED_SIGNAL ]
+    y:   A[ SignalR[ Array1D[np.int32] ], PvSuffix("signals:tdp_synth.Y"), Format.UNCACHED_SIGNAL ]
+    sum: A[ SignalR[ Array1D[np.int32] ], PvSuffix("signals:tdp_synth.Sum"), Format.UNCACHED_SIGNAL ]
     # fmt:on
 
     @AsyncStatus.wrap
