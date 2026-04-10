@@ -1,8 +1,15 @@
+from dataclasses import asdict
 from typing import Dict
 
 from bluesky.protocols import Reading
 from event_model import DataKey
 
+from bact_device_models.devices.orbit import (
+    BPMButtons,
+    BPMPosition,
+    BPMReading,
+    Orbit as OrbitModel,
+)
 
 from ..raw.orbit import Orbit as ROrbit
 import numpy as np
@@ -19,17 +26,10 @@ class Orbit(ROrbit):
         d = await super().describe()
         # split up info in table in individual columns
         tmp = d.pop(f"{self.name}-data")
-        descr_w_str = table_bytes_to_str_dtype(tmp["dtype_numpy"])
-        d3 = {
-            f"{self.name}-{name}": DataKey(
-                dtype="array",
-                source=tmp["source"],
-                shape=tmp["shape"],
-                dtype_numpy=type,
-            )
-            for name, type  in descr_w_str
+        additional = {
+            f"{self.name}-pos": DataKey(source=tmp["source"], shape=[], dtype="array"),
         }
-        d.update(d3)
+        d.update(additional)
         return d
 
     async def read(self) -> Dict[str, Reading]:
@@ -37,18 +37,28 @@ class Orbit(ROrbit):
         # todo: has ophyd / bluesky a helper func for splitting the read data?
         t_data = data.pop(f"{self.name}-data")
         table = t_data["value"]
-
-        # Todo: this storage could be more efficient
-        #       store it in this manner if it works
-        #       currently everything is stored as a string
-        converted_table = table_bytes_to_str(table)
-
+        value = OrbitModel(
+            orbit = [
+                BPMReading(
+                    name = str(name),
+                    pos = BPMPosition(x, y),
+                    btns = BPMButtons(a, b, c, d),
+                )
+                for name, x, y, a, b, c, d in zip(
+                                    table.BPM,
+                                    table.X,
+                                    table.Y,
+                                    table.A,
+                                    table.B,
+                                    table.C,
+                                    table.D,
+                    )
+            ]
+        )
         additional = {
-            f"{self.name}-{name}": Reading(
-                timestamp=t_data["timestamp"],
-                value=converted_table[name]
-            )
-            for name, type  in converted_table.dtype.descr
+                f"{self.name}-pos": Reading(
+                    timestamp = t_data["timestamp"], value = asdict(value)
+                )
         }
 
         data.update(additional)
